@@ -2,7 +2,7 @@
 
 Tool for building SEU-3D-like spatial-temporal omics web browser.
 
-# installation
+# Installation
 
 ```bash
 pip install seu3d-tool

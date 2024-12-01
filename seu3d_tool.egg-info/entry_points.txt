@@ -1,2 +1,0 @@
-[console_scripts]
-seu3d-tool = seu3d_tool:run_app
