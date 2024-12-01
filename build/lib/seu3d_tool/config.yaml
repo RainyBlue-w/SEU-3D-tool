@@ -1,0 +1,18 @@
+Dataset:
+# data to show on the server, in .h5ad format
+# a unique name for each file, and the path to the file
+# e.g. 
+# Dataset:
+#   E7.5: /path/to/E7.5.h5ad
+#   E8.0: /path/to/E8.0.h5ad
+
+  E7.5: /data1/share/omics-viewer/stintev/datasets/public/spatial/E7.5.h5ad
+  E7.75: /data1/share/omics-viewer/stintev/datasets/public/spatial/E7.75.h5ad
+  E8.0: /data1/share/omics-viewer/stintev/datasets/public/spatial/E8.0.h5ad
+
+annotation: celltype
+# name for the celltype annotation stored in the .h5ad files (adata.obs[annotation]), default: 'celltype'
+
+3D_embedding: X_3D
+# name for the 3D embedding stored in the .h5ad files (adata.obsm[3D_embedding]), default: 'X_spatial'
+
