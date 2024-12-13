@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "../../STinteV"
+		},
+		{
+			"path": "../../../../../data1/share/omics-viewer/stintev"
+		},
+		{
+			"path": "../../../.conda/envs/dash_dev/lib/python3.11/site-packages/spatialdm"
+		},
+		{
+			"path": "../../dash_spatialomicsviewer"
+		},
+		{
+			"path": "../../feffery_20200530_dash+celery+redis"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../STOmics-3D-release"
+		}
+	],
+	"settings": {}
+}

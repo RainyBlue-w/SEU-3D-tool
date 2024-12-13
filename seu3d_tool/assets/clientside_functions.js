@@ -37,7 +37,7 @@ function plot_expScatter3D(obs, cells, singleExp, mixcolor, ifmulti, hideAxes, p
                 ],
             },
             autosize: false,
-            'uirevision': 'constant',
+            uirevision: 'constant',
             margin: {l: 10, r: 0, t: 0, b: 0},
             scene: {
                 xaxis: {

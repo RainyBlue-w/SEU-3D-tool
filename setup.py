@@ -2,7 +2,7 @@
 #-*- encoding: UTF-8 -*-
 from setuptools import setup, find_packages
 
-VERSION = '0.1.0'
+VERSION = '0.1.4'
 
 setup(name='seu3d-tool',
       version=VERSION,
@@ -35,7 +35,8 @@ setup(name='seu3d-tool',
         'diskcache',
         'fastapi',
         'uvicorn',
-        'multiprocess'
+        'multiprocess',
+        'ruamel.yaml==0.18.6'
       ],
       zip_safe=False,
       entry_points={

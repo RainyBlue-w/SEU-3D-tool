@@ -44,122 +44,14 @@ for stage, path in config['Dataset'].items():
 
 coord_data = {}
 for stage, adata in dataset.items():
-  coord_data[stage] = adata.obsm[config['3D_embedding']][:, 0:3]
-  coord_data[stage] = pd.DataFrame(coord_data[stage])
+  coord_data[stage] = pd.DataFrame(adata.obsm[config['3D_embedding']])
+  if coord_data[stage].shape[1] != 3:
+    raise ValueError('Not a 3D embedding!')
   coord_data[stage].columns = ['x', 'y', 'z']
+  coord_data[stage].index = dataset[stage].obs_names
 
 
 # In[] functions
-
-def show_celltype_spatial(adata, embedding, cmap = colormap, **kws):
-  embedding = embedding.loc[adata.obs_names,:]
-  pdf = pd.DataFrame(np.array(embedding), 
-                    index=adata.obs_names, 
-                    columns=['x', 'y'])
-  pdf = pd.concat([pdf, adata.obs[['celltype','germ_layer']]], axis=1)
-  pdf = pdf.sort_values(by='celltype')
-  plot = px.scatter(
-  	data_frame = pdf,
-    x = 'x', y = 'y', color = 'celltype',
-    color_discrete_map = cmap,
-    **kws
-  )
-  plot.update_yaxes(visible=False)
-  plot.update_xaxes(visible=False)
-  plot.update_traces(marker_size=4.5,
-                    marker_opacity=1)
-  plot.update_layout(
-    margin=dict(l=10, r=10, t=30, b=0),
-    plot_bgcolor = '#ffffff', 
-    uirevision='constant',
-    legend_itemsizing = 'constant'
-  )
-  plot.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1],
-                                      font_size = 20)) 
-
-  return plot
-
-def show_feature_spatial(adata, feature, embedding, cmap = None, sort=False, ascending=True, **kws):
-    embedding = embedding.loc[adata.obs_names,:]
-    if cmap is None:
-        cmap = [(0.00, "rgb(244,244,244)"),
-                (0.05, "rgb(244, 244, 244)"),
-                (1.00, "rgb(34, 94, 168)")
-                ]
-    pdf = pd.DataFrame(np.array(embedding), 
-                       index=adata.obs_names, 
-                       columns=['x', 'y'])
-    pdf = pd.concat([pdf, adata[:,feature].to_df(), adata.obs['germ_layer']], axis=1)
-    if sort is True:
-      pdf = pdf.sort_values(by=feature, ascending=ascending)
-    plot = px.scatter(
-    		data_frame = pdf,
-    		x = 'x', y = 'y', color = feature,
-    		color_continuous_scale = cmap,
-        **kws
-    	)
-    plot.update_yaxes(visible=False)
-    plot.update_xaxes(visible=False)
-    plot.update_traces(marker_size=4.5,
-                      marker_opacity=1)
-    plot.update_layout(
-      margin=dict(l=10, r=10, t=30, b=0),
-      plot_bgcolor = '#ffffff', 
-      uirevision='constant',
-      coloraxis = {
-        'colorbar' : {'tickformat': '4.2f'}
-      }
-    )
-    plot.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1],
-                                               font_size = 20)) 
-    return plot
-
-def show_multiFeatures_spatial(adata, features_dict, embedding, **kws):
-  
-  embedding = embedding.loc[adata.obs_names,:]
-  pdf = pd.DataFrame(np.array(embedding), 
-                      index=adata.obs_names, 
-                      columns=['x', 'y'])
-  features = list(features_dict.values())
-  pdf = pd.concat([pdf, adata[:,features].to_df(), adata.obs['germ_layer']], axis=1)
-  colors = multiGenes_show_color(adata, features_dict)
-  
-  plot = go.Figure()
-  plot.add_trace(go.Scatter(
-    x = pdf.x, y = pdf.y, mode='markers',
-    marker={'color': colors}
-  ))
-  plot.update_yaxes(visible=False)
-  plot.update_xaxes(visible=False)
-  plot.update_traces(marker_size=4.5,
-                    marker_opacity=1)
-  plot.update_layout(
-    margin=dict(l=10, r=10, t=30, b=0),
-    plot_bgcolor = '#ffffff', 
-    uirevision='constant',
-  )
-  plot.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1],
-                                              font_size = 20)) 
-  return plot
-
-def pre_SubsetCellsByObs(
-  obs : pd.DataFrame, 
-  germ_layers : List[str],
-  celltypes : List[str],
-  xyz_range : Dict,
-  ):
-  '''
-  germ_layers: ectoderm, mesoderm, endoderm
-  xy_range: dict(x=(minX, maxX),y=(minY, maxY))
-  '''
-  subset = obs.query(
-    '(germ_layer in @germ_layers) & \
-    (celltype in @celltypes) & \
-    ( @xyz_range["x"][0] <= x <= @xyz_range["x"][1] ) & \
-    ( @xyz_range["y"][0] <= y <= @xyz_range["y"][1] ) & \
-    ( @xyz_range["z"][0] <= z <= @xyz_range["z"][1] )'
-  )
-  return subset.index
 
 def show_expViolin(adata, feature, **kws):
   data = adata[:,feature].to_df()[feature]
@@ -181,15 +73,15 @@ def show_expViolin(adata, feature, **kws):
   )
   return fig
 
-def show_ctpExpViolin(adata, feature, **kws):
-  pdf = pd.concat([adata[:,feature].to_df(), adata.obs.celltype], axis=1)
-  counts = pdf.celltype.value_counts()
+def show_ctpExpViolin(adata, feature, ctp_key: str = config['annotation'], **kws):
+  pdf = pd.concat([adata[:,feature].to_df(), adata.obs[ctp_key]], axis=1)
+  counts = pdf[ctp_key].value_counts()
   counts = counts[counts>0]
   sorted_ctp = counts.index.to_list()
-  pdf['celltype'] = pd.Categorical(pdf['celltype'].to_list(),
+  pdf[ctp_key] = pd.Categorical(pdf[ctp_key].to_list(),
                                    categories=sorted_ctp[::-1])
   fig = px.violin(
-    pdf, x=feature, y='celltype', color = 'celltype', 
+    pdf, x=feature, y=ctp_key, color = ctp_key, 
     color_discrete_map=colormap, orientation='h', height=800,
   ).update_traces(
     side='positive', width=1.5, **kws,
@@ -231,7 +123,7 @@ def show_multiFeatures_expViolin(adata, features_dict, **kws):
   
   return fig
 
-def show_multiFeatures_ctpExpViolin(adata, features_dict, **kws):
+def show_multiFeatures_ctpExpViolin(adata, features_dict, ctp_key: str = config['annotation'], **kws):
   
   filt_dict = {}
   for color,feature  in features_dict.items():
@@ -239,16 +131,16 @@ def show_multiFeatures_ctpExpViolin(adata, features_dict, **kws):
           filt_dict[color] = feature
   features = list(filt_dict.values())
 
-  pdf = pd.concat([adata[:,features].to_df(), adata.obs.celltype], axis=1)
-  pdf = pdf.melt(id_vars='celltype')
+  pdf = pd.concat([adata[:,features].to_df(), adata.obs[ctp_key]], axis=1)
+  pdf = pdf.melt(id_vars=ctp_key)
   pdf = pdf.rename(columns = {'variable': 'Gene', 'value': 'expression'})
   # pdf = pdf[pdf['expression']>0]
 
-  pdf.celltype = pd.Categorical(pdf.celltype, ordered=True)
+  pdf[ctp_key] = pd.Categorical(pdf[ctp_key], ordered=True)
   # counts = pdf.groupby('Gene').apply(lambda x: x.value_counts())
 
   fig = px.violin(
-    pdf, x='expression', y='celltype', color = 'celltype', 
+    pdf, x='expression', y=ctp_key, color = ctp_key, 
     color_discrete_map=colormap, orientation='h', height=800,
     animation_frame='Gene', 
   ).update_traces(
@@ -420,9 +312,9 @@ SET_STORE_JSONtoPlot_3D = html.Div(
 )
 
 init_range = dict(
-  x_min = np.floor(dataset[next(iter(dataset))].obs.x.min()/10)*10, x_max = np.ceil(dataset[next(iter(dataset))].obs.x.max()/10)*10,
-  y_min = np.floor(dataset[next(iter(dataset))].obs.y.min()/10)*10, y_max = np.ceil(dataset[next(iter(dataset))].obs.y.max()/10)*10,
-  z_min = np.floor(dataset[next(iter(dataset))].obs.z.min()/10)*10, z_max = np.ceil(dataset[next(iter(dataset))].obs.z.max()/10)*10,
+  x_min = np.floor(coord_data[next(iter(dataset))]['x'].min()/10)*10, x_max = np.ceil(coord_data[next(iter(dataset))]['x'].max()/10)*10,
+  y_min = np.floor(coord_data[next(iter(dataset))]['y'].min()/10)*10, y_max = np.ceil(coord_data[next(iter(dataset))]['y'].max()/10)*10,
+  z_min = np.floor(coord_data[next(iter(dataset))]['z'].min()/10)*10, z_max = np.ceil(coord_data[next(iter(dataset))]['z'].max()/10)*10,
 )
 
 SET_STORE_Ranges_3D = html.Div(
@@ -670,7 +562,7 @@ spatial_tab_plotFeature3D = dbc.Tab(
                           dmc.Col([
                             dcc.Dropdown(
                               options = dataset[next(iter(dataset))].var_names,
-                              value = 'Cdx1',
+                              value = dataset[next(iter(dataset))].var_names[0],
                               id="DROPDOWN_singleName_3D",
                               clearable=False
                             ),
@@ -981,6 +873,7 @@ def update_violinDownloadConfig_3D(type, scale):
   Input('SEGMENTEDCONTROL_violinPoints_3D', 'value'),
   State('STORE_allCelltypes_3D', 'data'),
   State('STORE_multiNameInfo_3D', 'data'),
+  prevent_initial_call=True
 )
 def update_violinPointStyle_3D(points, allCelltypes, minfo):
   
@@ -1001,6 +894,7 @@ def update_violinPointStyle_3D(points, allCelltypes, minfo):
   Input('NUMBERINPUT_violinPointpos_3D', 'value'),
   State('STORE_allCelltypes_3D', 'data'),
   State('STORE_multiNameInfo_3D', 'data'),
+  prevent_initial_call=True
 )
 def update_violinPointpos_3D(pointpos, allCelltypes, minfo):
   
@@ -1019,6 +913,7 @@ def update_violinPointpos_3D(pointpos, allCelltypes, minfo):
   Input('NUMBERINPUT_violinPointsize_3D', 'value'),
   State('STORE_allCelltypes_3D', 'data'),
   State('STORE_multiNameInfo_3D', 'data'),
+  prevent_initial_call=True
 )
 def update_violinPointsize_3D(pointsize, allCelltypes, minfo):
   
@@ -1037,6 +932,7 @@ def update_violinPointsize_3D(pointsize, allCelltypes, minfo):
   Input('SEGMENTEDCONTROL_violinBox_3D', 'value'),
   State('STORE_allCelltypes_3D', 'data'),
   State('STORE_multiNameInfo_3D', 'data'),
+  prevent_initial_call=True
 )
 def update_violinBox_3D(box, allCelltypes, minfo):
   
@@ -1059,8 +955,9 @@ def update_violinBox_3D(box, allCelltypes, minfo):
   Input('NUMBERINPUT_violinPointjitter_3D', 'value'),
   State('STORE_allCelltypes_3D', 'data'),
   State('STORE_multiNameInfo_3D', 'data'),
+  prevent_initial_call=True
 )
-def update_violinPointpos_3D(jitter, allCelltypes, minfo):
+def update_violinPointJitter_3D(jitter, allCelltypes, minfo):
   
   n_gene = len(minfo)
   n_ctp = len(allCelltypes)
@@ -1077,8 +974,9 @@ def update_violinPointpos_3D(jitter, allCelltypes, minfo):
   Input('NUMBERINPUT_violinBoxwidth_3D', 'value'),
   State('STORE_allCelltypes_3D', 'data'),
   State('STORE_multiNameInfo_3D', 'data'),
+  prevent_initial_call=True
 )
-def update_violinPointpos_3D(boxwidth, allCelltypes, minfo):
+def update_violinBoxWidth_3D(boxwidth, allCelltypes, minfo):
   
   n_gene = len(minfo)
   n_ctp = len(allCelltypes)
@@ -1103,18 +1001,27 @@ def update_dataSummary_3D(featureType, stage):
 # update_nameOptions
 @callback(
   Output('DROPDOWN_singleName_3D', 'options'),
+  Output('DROPDOWN_singleName_3D', 'value'),
   Input('DROPDOWN_singleName_3D', 'search_value'),
-  Input('DROPDOWN_featureType_3D', 'value'),
-  Input('DROPDOWN_stage_3D', 'value')
+  Input('DROPDOWN_stage_3D', 'value'),
+  prevent_initial_call=True
 )
-def update_nameOptions_single_3D(search, featureType, stage):
+def update_nameOptions_single_3D(search, stage):
 
-  if not search:
-    opts = dataset[stage].var_names
-  else:
-    opts = dataset[stage].var_names[dataset[stage].var_names.str.startswith(search)].sort_values()
+  tid = ctx.triggered_id
+
+  if 'DROPDOWN_singleName_3D':
+    if not search:
+      opts = dataset[stage].var_names
+    else:
+      opts = dataset[stage].var_names[dataset[stage].var_names.str.startswith(search)].sort_values()
+    value = no_update
   
-  return opts
+  if tid == 'DROPDOWN_stage_3D':
+    opts = dataset[stage].var_names
+    value = opts[0]
+  
+  return opts, value
 
 @callback(
   Output({'type': 'DROPDOWN_multiName_3D', 'index': MATCH}, 'options'),
@@ -1239,7 +1146,7 @@ def update_sliderRange_3D(maxRange):
 )
 def store_cellsObs_forJSONtoPlot_3D(stage, featureType):
 
-  obs = dataset[stage].obs[['x','y','z', config['annotation']]]
+  obs = pd.concat([ coord_data[stage], dataset[stage].obs[config['annotation']].astype(str) ], axis=1)
   return obs.to_dict('index')
 
 @callback(
@@ -1252,7 +1159,7 @@ def store_cellsObs_forJSONtoPlot_3D(stage, featureType):
 )
 def store_cellsInfo_forJSONtoPlot_3D(sliceRange, stage, featureType):
   
-  obs = dataset[stage].obs[['x','y','z',config['annotation']]]
+  obs = pd.concat([coord_data[stage], dataset[stage].obs[config['annotation']].astype(str) ], axis=1)
 
   if_inSliceRange = ( 
                       (obs['x'] <= sliceRange['x_max']) & 
@@ -1283,13 +1190,12 @@ def store_cellsInfo_forJSONtoPlot_3D(sliceRange, stage, featureType):
   Input('BUTTON_multiPlot_3D', 'n_clicks'),
   Input('SWITCH_hideZero_3D', 'checked'),
   Input('DROPDOWN_stage_3D', 'value'),
-  Input('DROPDOWN_featureType_3D', 'value'),
   
-  State('DROPDOWN_singleName_3D', 'value'),
+  Input('DROPDOWN_singleName_3D', 'value'), # use `Input` to wait for updating when `stage` changed
   State('STORE_multiNameInfo_3D', 'data'),
   State('STORE_ifmulti_3D', 'data'),
 )
-def store_expInfo_forJSONtoPlot_3D(sclick, mclick, hideZero, stage, featureType, sname, minfo, ifmulti):
+def store_expInfo_forJSONtoPlot_3D(sclick, mclick, hideZero, stage, sname, minfo, ifmulti):
 
   def return_single():
     ifmulti = False
@@ -1329,7 +1235,8 @@ def store_expInfo_forJSONtoPlot_3D(sclick, mclick, hideZero, stage, featureType,
   
   btn_id = ctx.triggered_id
   if btn_id:
-    if 'DROPDOWN_stage_3D' in btn_id or 'DROPDOWN_featureType_3D' in btn_id:
+  
+    if 'DROPDOWN_stage_3D' in btn_id:
       if not ifmulti:
         ifmulti,exp,cellsExpFilter = return_single()
         exp = exp.to_dict('index')
@@ -1369,6 +1276,9 @@ def store_expInfo_forJSONtoPlot_3D(sclick, mclick, hideZero, stage, featureType,
           _,_,cellsExpFilter,_ = return_multi()
           exp_multi = return_multiExp()
           return (Serverside(cellsExpFilter), no_update, exp_multi, no_update, no_update)
+        
+    else:
+      raise PreventUpdate
 
   else:
       ifmulti,exp,cellsExpFilter = return_single()
@@ -1388,7 +1298,8 @@ def store_expInfo_forJSONtoPlot_3D(sclick, mclick, hideZero, stage, featureType,
 def update_chipGroupCelltype_3D(obsFilter, expFilter, stage, cmap):
   cells = list(set(obsFilter)&set(expFilter))
   cells.sort()
-  celltypes = list(dataset[stage].obs['celltype'][cells].unique())
+  
+  celltypes = list(dataset[stage].obs[config['annotation']][cells].unique().astype(str))
   
   chips = [
     dmc.Chip(
@@ -1449,7 +1360,7 @@ def allSelection_celltypesButton_3D(click, curValue, allCelltypes):
 )
 def store_ctpInfo_forJSONtoPlot_3D(selectedCtps, stage):
     
-  series = dataset[stage].obs['celltype']
+  series = dataset[stage].obs[config['annotation']].astype(str)
   series = series[series.isin(selectedCtps)]
   
   return series.index.to_list()
@@ -1592,7 +1503,6 @@ def update_storeCtpCmap_3D(colors):
     
     color = triggered[0]['value']
     ctp = triggered_id['id']
-    print('triggered:', color, 'triggered_id:', ctp)
     patch = Patch()
     patch[ctp] = color
     return patch
@@ -1699,7 +1609,7 @@ def update_expPointSize_3D(size):
 )
 def update_ctpPointSize_3D(size, cells, stage):
   
-  celltypes = dataset[stage].obs.loc[cells, 'celltype'].unique()
+  celltypes = dataset[stage].obs.loc[cells, config['annotation']].unique().astype(str)
   patch = Patch()
   for i in range(0,len(celltypes)):
     patch['data'][i]['marker']['size'] = size

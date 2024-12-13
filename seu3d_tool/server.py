@@ -24,7 +24,12 @@ subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
 config_parser = subparsers.add_parser('config', help='Server configuration')
 config_group = config_parser.add_mutually_exclusive_group(required=True)
 config_group.add_argument('--new', action='store_true' ,help='Generate a new config file')
-config_group.add_argument('--update', type=str, help='Path to finished configure file. This will updatd server config with given file')
+config_group.add_argument(
+  '--update', type=str, 
+  help='''Path to finished configure file.
+    This will updatd server config with given file, and the colormap for celltype annotation will be generated.
+    '''
+  )
 config_group.add_argument(
   '--current', action='store_true',
   help= '''Print current configuration file. 
@@ -58,6 +63,7 @@ def run_app():
         print('No configuration yet.')
     else:
       try:
+        config_colormap(args.update)
         shutil.copy(args.update, os.path.join(pkg_path, 'seu3d_config.yaml')) # 覆盖
         print('Configuration updated.')
       except:
@@ -68,9 +74,6 @@ def run_app():
     config_pth = os.path.join(pkg_path, 'seu3d_config.yaml')
     with open(config_pth, 'r') as f:
       config = yaml.safe_load(f)
-
-    if 'colormap' not in config:
-      config_colormap(config_pth)
 
     app = DashProxy(
       __name__, 
