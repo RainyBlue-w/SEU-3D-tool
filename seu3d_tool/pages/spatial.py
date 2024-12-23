@@ -27,6 +27,7 @@ from typing import List, Dict
 import yaml
 import pkg_resources
 import os
+import json
 
 
 # In[] data
@@ -743,6 +744,24 @@ spatial_tab_plotFeature3D = dbc.Tab(
                 ),
               ],
             ),
+            # tmp-Angle
+            fac.AntdCollapse(
+              isOpen=False,
+              forceRender=True,
+              ghost=True,
+              title = dmc.Text('Camera Angle', className='dmc-Text-sidebar-title'),
+              children = dmc.Stack(
+                [
+                  dmc.Group([
+                    html.Pre(id = 'PRE_camera_angle_3D'),
+                  ]),
+                  dmc.Group([
+                    dmc.Button('Get angle', id='BUTTON_get_angle_3D'),
+                    dmc.Button('Set angle', id='BUTTON_set_angle_3D'),
+                  ])
+                ]
+              )
+            )
           ],
         ),
       ], top=10),
@@ -1802,12 +1821,42 @@ def cal_moranRes(click, cells, stage, featureType):
           ]
         )
 
+# camera angle adjust
+@callback(
+  Output('PRE_camera_angle_3D', 'children'),
+  Input('BUTTON_get_angle_3D', 'n_clicks'),
+  State('FIGURE_3Dcelltype', 'figure'),
+)
+def get_camera_angle_and_display(click, figure):
+  if click:
+    angle_json = figure['layout']['scene']['camera']
+    return json.dumps(
+        angle_json,
+        indent=2,
+        ensure_ascii=False,
+    )
+  raise PreventUpdate
+
+@callback(
+  Output('FIGURE_3Dcelltype', 'figure'),
+  Output('FIGURE_3Dexpression', 'figure'),
+  Input('BUTTON_set_angle_3D', 'n_clicks'),
+  State('PRE_camera_angle_3D', 'children'),
+)
+def set_camera_angle(click, angle_json):
+  if click:
+    patch = Patch()
+    patch['layout']['scene']['camera'] = json.loads(angle_json.strip())
+    return patch, patch
+  raise PreventUpdate
 # In[] app/run:
 
 tabs = dbc.Col(
   spatial_tabs,
   id = 'tabs'
 )
+
+dcc.Graph
 
 layout = dbc.Container(
     [
