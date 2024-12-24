@@ -99,4 +99,4 @@ seu3d-tool config --update seu3d_config.yaml
 
 # Usage
 
-Tutorial: [https://rainyblue-w.github.io/SEU-3D/]https://rainyblue-w.github.io/SEU-3D/
+Tutorial: https://rainyblue-w.github.io/SEU-3D/
